@@ -1,0 +1,28 @@
+on:
+  workflow_dispatch:
+
+name: Retrieve Vault Secret
+
+jobs:
+  build:
+    runs-on: self-hosted
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+
+    # Use official HashiCorp Vault action, directing it to retrieve the `npmToken` secret from
+    # the local endpoint using the role configured previously.
+    - uses: hashicorp/vault-action@v2.4.0
+      with:
+        url: 'http://127.0.0.1:8200'
+        method: jwt
+        role: github-action
+        secrets: secret/data/ci npmToken
+
+    # Use the secret (echo for validation, in this case). By default, the secret is written to an 
+    # environment variable with the same name as the secret. 
+    # https://github.com/hashicorp/vault-action#set-output-variable-name
+    - run: |
+        echo $NPMTOKEN | rev
