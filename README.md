@@ -8,7 +8,9 @@ Refer to [Configuring OpenID Connect in HashiCorp Vault - GitHub Docs](https://d
 
 ### Configure Vault
 
-Start Vault:
+This demo uses the [open source, self hosted version of Vault](https://www.vaultproject.io/downloads). Vault Enterprise could be used with slight modifications.
+
+Start Vault locally:
 ```
 vault server -dev
 ```
@@ -18,7 +20,7 @@ Enable JWT auth mechanism:
 vault auth enable jwt
 ```
 
-Configure jwt auth with oidc discovery URL:
+Configure JWT auth with OIDC discovery URL. Note: `default_role` must match the name of the role created later.
 ```
 vault write auth/jwt/config \
 	oidc_discovery_url="https://token.actions.githubusercontent.com" \
@@ -26,7 +28,7 @@ vault write auth/jwt/config \
 	default_role="github-action"
 ```
 
-Edit `ci` policy to allow access to CI:
+Make a policy to allow read access to the path where the secret will be kept. Note: in the [KV2](https://www.vaultproject.io/docs/secrets/kv/kv-v2) engine, [`data` is used](https://www.vaultproject.io/docs/secrets/kv/kv-v2#acl-rules) in the path.
 ```hcl
 # ci-policy.hcl
 path "secret/data/ci" {
@@ -34,12 +36,12 @@ path "secret/data/ci" {
 }
 ```
 
-Write the policy:
+Write the policy to Vault:
 ```
 vault policy write ci ci-policy.hcl
 ```
 
-Create a role for jwt authentication:
+Create a role for JWT authentication. Note: the `bound_subject` and `bound_audiences` are configurable according to your security preferences. Read more in the [GitHub](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-hashicorp-vault#overview) and [HashiCorp](https://www.vaultproject.io/docs/auth/jwt#oidc-configuration-troubleshooting) documentation.
 ```
 vault write auth/jwt/role/github-action \
 	bound_subject="repo:imjohnbo/super-duper-vault-demo:ref:refs/heads/main" \
@@ -49,7 +51,6 @@ vault write auth/jwt/role/github-action \
 	ttl=10m \
 	role_type="jwt"
 ```
-Note: ttl defines the validity of client_token.Change this if longer validity for token is needed.
 
 Add secret:
 ```
@@ -67,31 +68,4 @@ Configure and start a [self hosted runner](https://docs.github.com/en/actions/ho
 
 ### Retrive the secret from an Actions workflow
 
-```yml
-on:
-  workflow_dispatch:
-
-name: Retrieve Vault Secret
-
-jobs:
-  build:
-    runs-on: self-hosted
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-
-    # Use official HashiCorp Vault action, directing it to retrieve the `npmToken` secret from
-    # the local endpoint using the role configured previously.
-    - uses: hashicorp/vault-action@v2.4.0
-      with:
-        url: 'http://127.0.0.1:8200'
-        method: jwt
-        role: github-action
-        secrets: secret/data/ci npmToken
-
-    # Use the secret. By default, the secret is written to an 
-    # environment variable with the same name as the secret. 
-    # https://github.com/hashicorp/vault-action#set-output-variable-name
-```
+See `.github/workflows/vault.yml` for a working example.
