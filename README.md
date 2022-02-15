@@ -91,9 +91,7 @@ jobs:
         role: github-action
         secrets: secret/data/ci npmToken
 
-    # Use the secret (echo for validation, in this case). By default, the secret is written to an 
+    # Use the secret. By default, the secret is written to an 
     # environment variable with the same name as the secret. 
     # https://github.com/hashicorp/vault-action#set-output-variable-name
-    - run: |
-        echo $NPMTOKEN | rev
 ```
